@@ -1,0 +1,70 @@
+---
+- name: Install required packages
+  ansible.builtin.dnf:
+    name:
+      - wget
+      - git
+    state: present
+
+- name: Create swap file
+  ansible.builtin.command:
+    cmd: dd if=/dev/zero of=/swapfile bs=1M count={{ swap_size_mb }}
+    creates: /swapfile
+
+- name: Set swap file permissions
+  ansible.builtin.file:
+    path: /swapfile
+    mode: '0600'
+
+- name: Format swap file
+  ansible.builtin.command:
+    cmd: mkswap /swapfile
+  changed_when: false
+
+- name: Enable swap
+  ansible.builtin.command:
+    cmd: swapon /swapfile
+  register: swapon_result
+  changed_when: swapon_result.rc == 0
+  failed_when: false
+
+- name: Add swap to fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    line: '/swapfile none swap sw 0 0'
+    state: present
+
+- name: Download k3s install script
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: '0755'
+
+- name: Install k3s
+  ansible.builtin.command:
+    cmd: /tmp/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+  args:
+    creates: /usr/local/bin/k3s
+
+- name: Wait for k3s to be ready
+  ansible.builtin.wait_for:
+    path: /etc/rancher/k3s/k3s.yaml
+    timeout: 60
+
+- name: Enable and start k3s
+  ansible.builtin.service:
+    name: k3s
+    state: started
+    enabled: true
+
+- name: Verify k3s is running
+  ansible.builtin.command:
+    cmd: k3s kubectl get nodes
+  register: k3s_nodes
+  changed_when: false
+
+- name: Print k3s nodes
+  ansible.builtin.debug:
+    msg: "{{ k3s_nodes.stdout }}"
