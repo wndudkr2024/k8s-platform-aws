@@ -1,4 +1,4 @@
 ---
 k3s_version: "v1.29.4+k3s1"
 k3s_install_dir: /usr/local/bin
-swap_size_mb: 2048
+k3s_swap_size_mb: 2048

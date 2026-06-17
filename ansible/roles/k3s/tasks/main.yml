@@ -8,7 +8,7 @@
 
 - name: Create swap file
   ansible.builtin.command:
-    cmd: dd if=/dev/zero of=/swapfile bs=1M count={{ swap_size_mb }}
+    cmd: dd if=/dev/zero of=/swapfile bs=1M count={{ k3s_swap_size_mb }}
     creates: /swapfile
 
 - name: Set swap file permissions
@@ -25,8 +25,8 @@
 - name: Enable swap
   ansible.builtin.command:
     cmd: swapon /swapfile
-  register: swapon_result
-  changed_when: swapon_result.rc == 0
+  register: k3s_swapon_result
+  changed_when: k3s_swapon_result.rc == 0
   failed_when: false
 
 - name: Add swap to fstab
